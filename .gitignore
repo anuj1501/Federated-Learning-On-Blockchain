@@ -1,0 +1,5 @@
+*.idea*
+*.pyc
+flask/client/uploads/*
+flask/client/models/*
+*__pycache__*

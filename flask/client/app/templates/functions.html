@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Contract Functions</title>
+
+    <link href="{{ url_for('static', filename='css/materialize.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/home_styles.css') }}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script type=text/javascript>
+
+        function myFunction(){
+            $('input[type=file]').change(function () {
+            console.log(this.files[0].mozFullPath);
+        });
+        }
+        
+        
+        
+    </script>
+</head>
+<body>
+<nav>
+    <div class="nav-wrapper blue darken-3">
+        <a href="{{ url_for('homepage') }}" class="brand-logo title-style">Switch Account</a>
+    </div>
+</nav>
+<div class="container">
+    <br>
+    <div class="row">
+        <h6><strong>{{ account }} </strong> is being used.</h6>
+    </div>
+    <div class="row">
+        <div class="col s2">
+            <h6>1. Deploy the contract</h6>
+        </div>
+        <form action="{{ url_for('deploy_contract') }}" method="POST" class="col s10">
+            <button name="action" class="waves-effect waves-light btn-large orange darken-2">Deploy
+            </button>
+        </form>
+    </div>
+    <div class="row">
+        <div class="col s12">
+            <h6>2. Adding data to IPFS</h6>
+        </div>
+        <form action="{{ url_for('addFileToIPFS') }}" method="POST" enctype='multipart/form-data' class="col s12">
+            <div class="row">
+                <div class="input-field col s2">
+                    <input placeholder="Model Number" name="model_number" id="model_number" type="number"
+                           class="validate">
+                    <!-- <label for="first_name">Model Number</label> -->
+                </div>
+                <div class="file-field input-field col s8">
+                    <div class="btn col s2 orange darken-2" id="file-button">
+                        <span>File</span>
+                        <input type="file" name="file" id="i_file">
+                    </div>
+                    <div class="file-path-wrapper col s10">
+                        <input class="file-path validate"
+                               placeholder="Filename"
+                               name="filename" id="filename">
+                    </div>
+                </div>
+
+                <button name="action" onclick = "myFunction()" class="waves-effect waves-light btn-large orange darken-2 col s2">Add Transaction
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="row">
+        <div class="col s2">
+            <h6>3. Train the local network</h6>
+        </div>
+        <form action="{{ url_for('train') }}" method="POST" class="col s10">
+            <button name="action" class="waves-effect waves-light btn-large orange darken-2">Train
+            </button>
+        </form>
+    </div>
+    <div class="row">
+        <div class="col s2">
+            <h6>4. Pull Model from Organization</h6>
+        </div>
+        <form action="{{ url_for('checkpoint_model_pull') }}" method="POST" class="col s10">
+            <button name="action" class="waves-effect waves-light btn-large orange darken-2">Pull Model
+            </button>
+        </form>
+    </div>
+</div>
+<div class="row">
+    {% if success == True %}
+        <div class="col s6 offset-s3">
+            <h5>
+                <center>Your model was submitted successfully.</center>
+            </h5>
+        </div>
+    {% elif success == False %}
+        <div class="col s6 offset-s3">
+            <h5>
+                <center>Your model submission has failed.</center>
+            </h5>
+        </div>
+    {% endif %}
+</div>
+<div class="row">
+    {% if error %}
+        <div class="col s6 offset-s3">
+            <h5>
+                <center>File upload failed.</center>
+            </h5>
+        </div>
+    {% endif %}
+    <div class="row">
+        <div class="col s6 offset-s3">
+            <p>
+            <center>Model Accuracy of client models</center>
+            </p>
+            {% if accuracy %}
+                <h5><center>{{ accuracy }}</center></h5>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+</body>
+
+</html>

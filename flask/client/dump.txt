@@ -1,0 +1,45 @@
+
+Compiling your contracts...
+===========================
+> Compiling .\contracts\LearningContract.sol
+> Compiling .\contracts\Migrations.sol
+> Artifacts written to C:\Users\user\federated-learning\build\contracts
+> Compiled successfully using:
+   - solc: 0.4.26+commit.4563c3fc.Emscripten.clang
+
+
+Starting migrations...
+======================
+> Network name:    'development'
+> Network id:      5777
+> Block gas limit: 6721975 (0x6691b7)
+
+
+1_initial_migration.js
+======================
+
+   Deploying 'Migrations'
+   ----------------------
+   > transaction hash:    0x988ef34c00dcb2bece2f4bb949107ca182e97c9b695bd2d33a809a0eacaac3b6
+   > Blocks: 0            Seconds: 0
+   > contract address:    0x5348d51A459026A402F089a67E8126769D9b4058
+   > block number:        91
+   > block timestamp:     1649164149
+   > account:             0x35ab83137e14FBeFE4b2c081F23a89D18cf510F5
+   > balance:             93.848591839999999986
+   > gas used:            203559 (0x31b27)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00407118 ETH
+
+   > Saving migration to chain.
+   > Saving artifacts
+   -------------------------------------
+   > Total cost:          0.00407118 ETH
+
+Summary
+=======
+> Total deployments:   1
+> Final cost:          0.00407118 ETH
+
+
