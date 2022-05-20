@@ -3,7 +3,6 @@ pragma solidity ^0.5.0;
 contract LearningContract {
 
     struct FileName {
-        uint modelNumber;
         string fileName;
         string ipfsHash;
         string modelHash;
@@ -33,7 +32,7 @@ contract LearningContract {
     }
 
 
-    function addFile(uint modelNumber, string memory fileName, string memory ipfsHash) public {
+    function addFile(string memory fileName, string memory ipfsHash) public {
 
         if (!checkExistence(msg.sender)) {
             registeredUsers.push(msg.sender);
@@ -41,7 +40,6 @@ contract LearningContract {
         }
 
         FileName memory file;
-        file.modelNumber = modelNumber;
         file.fileName = fileName;
         file.ipfsHash = ipfsHash;
         filenames[msg.sender] = file;
@@ -65,10 +63,6 @@ contract LearningContract {
 
     function getFileNameForUser(address user) public view returns (string memory){
         return filenames[user].fileName;
-    }
-
-    function getModelNumberForUser(address user) public view returns (uint){
-        return filenames[user].modelNumber;
     }
 
     function getRegisteredUsers(uint index) public view returns (address) {
