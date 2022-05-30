@@ -1,4 +1,5 @@
 from http import client
+from multiprocessing import synchronize
 from multiprocessing.connection import Client
 from flask import  request, flash, redirect, url_for,send_file,make_response
 from app import *
@@ -37,7 +38,7 @@ def upload_file_sync(filepath):
 def submit_contract():
 
     if request.method == 'POST':        
-        with open(app.config['BASE_FOLDER'] + "contracts/LearningContract.sol","r") as f:
+        with open(app.config['BASE_PATH'] + "contracts/LearningContract.sol","r") as f:
             contract_src = str(f.read())
         contract_interface = compile_source(
             contract_src,
@@ -51,6 +52,7 @@ def submit_contract():
         )
         print ("Sender's address", session.get('account'), "\n")
         # account = "0x35ab83137e14FBeFE4b2c081F23a89D18cf510F5"
+        print(request.form)
         account = request.form["userID"]
         print("account = ",account)
         # Submit the transaction that deploys the contract
@@ -85,7 +87,7 @@ def submit_contract():
         reward = request.form['reward']
         model_description = request.form['modelDescription']
         contract_name = request.form['contractName']
-
+        print(base_account_path + '/' + model_upload_file.filename)
         base_acc = calculate_initial_accuracy(validation_path=base_account_path + '/' + validation_data_upload_file.filename,model_path=base_account_path + '/' + model_upload_file.filename)
         
         new_organizer = Organizer(
@@ -167,16 +169,18 @@ def model_pull():
             True, 'inputs': [], 'name': 'getRegisteredUsers', 'outputs': [{'name': '', 'type': 'address[]'}], 'payable': False, 'stateMutability': 'view', 'type': 'function'}, {'constant': True, 'inputs': [{'name': '', 'type': 'uint256'}], 'name': 'registeredUsers', 'outputs': [{'name': '', 'type': 'address'}], 'payable': False, 'stateMutability': 'view', 'type': 'function'}, {'constant': True, 'inputs': [{'name': 'user', 'type': 'address'}], 'name': 'getIpfsHashForUser', 'outputs': [{'name': '', 'type': 'string'}], 'payable': False, 'stateMutability': 'view', 'type': 'function'}, {'constant': True, 'inputs': [], 'name': 'getIpfsHashForCheckpoint', 'outputs': [{'name': '', 'type': 'string'}], 'payable': False, 'stateMutability': 'view', 'type': 'function'}, {'constant': False, 'inputs': [{'name': 'w', 'type': 'address'}], 'name': 'transferReward', 'outputs': [], 'payable': True, 'stateMutability': 'payable', 'type': 'function'}, {'constant': True, 'inputs': [], 'name': 'owner', 'outputs': [{'name': '', 'type': 'address'}], 'payable': False, 'stateMutability': 'view', 'type': 'function'}, {'constant': True, 'inputs': [], 'name': 'checkpointIpfsMap', 'outputs': [{'name': '', 'type': 'uint256'}], 'payable': False, 'stateMutability': 'view', 'type': 'function'}, {'constant': True, 'inputs': [{'name': '', 'type': 'address'}], 'name': 'filenames', 'outputs': [{'name': 'fileName', 'type': 'string'}, {'name': 'ipfsHash', 'type': 'string'}, {'name': 'modelHash', 'type': 'string'}], 'payable': False, 'stateMutability': 'view', 'type': 'function'}, {'constant': True, 'inputs': [{'name': 'user', 
             'type': 'address'}], 'name': 'getFileNameForUser', 'outputs': [{'name': '', 'type': 'string'}], 'payable': False, 'stateMutability': 'view', 'type': 'function'}, {'constant': False, 'inputs': [{'name': 'modelIpfsHash', 'type': 'string'}], 'name': 'addModelFile', 'outputs': [], 'payable': False, 'stateMutability': 'nonpayable', 'type': 'function'}, {'inputs': [], 'payable': False, 'stateMutability': 'nonpayable', 'type': 'constructor'}]
     contract_address = request.form["contractAddress"]
+    print(request.form)
     account = request.form["userID"]
     contract = server.eth.contract(
                 address=request.form["contractAddress"],
-                abi=abi,
+                abi=abi
                 )
     
     account = request.form["userID"]
-    organizer = Organizer.query.filter_by(wallet_address=account).first()
-    users = contract.functions.getRegisteredUsers().call()    
-
+    organizer = Organizer.query.filter_by(contract_address=contract_address).order_by(Organizer.oid.desc()).first()
+    users = contract.functions.getRegisteredUsers().call()
+    # users = Contributor.query.filter_by(contract_address=contract_address).all()    
+    print(users)
     base_accuracy = organizer.base_accuracy
     best_model_paths = list()
     map_of_address_to_reward = dict()
@@ -199,6 +203,7 @@ def model_pull():
         final_reward_value = (acc / total_improvement) * reward
         map_of_address_to_reward[add] = final_reward_value
 
+    print("map of address and reward: ", map_of_address_to_reward)
     for add,rew in map_of_address_to_reward.items():
 
         nonce = server.eth.getTransactionCount(account)
@@ -212,11 +217,12 @@ def model_pull():
         print("Gas Used ", receipt.gasUsed)
 
         contributor = Contributor.query.filter_by(wallet_address=add)
+        
         contributor.reward_earned = rew
         db.session.commit()
     
-    # Contributor.query.filter_by(contract_address=contract_address).delete()
-    # Organizer.query.filter_by(contract_address=contract_address).delete()
+    # Contributor.query.filter_by(contract_address=contract_address).delete(synchronize_session='fetch')
+    # Organizer.query.filter_by(contract_address=contract_address).delete(synchronize_session='fetch')
     # db.session.commit()
 
     response = make_response(send_file(organizer.base_model_path, as_attachment=True))
@@ -237,11 +243,15 @@ def get_contributor_balance():
     c = Contributor.query.filter_by(wallet_address=account)
     return {"balance" : c.reward_earned}
 
-@app.route('/get_organizer_balance', methods=['POST'])
+@app.route('/get_balance', methods=['GET','POST'])
 @cross_origin()
 def get_organizer_balance():
-    account = request.form["userID"]
+    account = request.args.get("userID")
+    print(account)
     balance = server.eth.getBalance(account)
+    print(balance)
+    balance = (balance / (10**18))
+    print("balance = ",balance)
     return {"balance" : balance}
 
 @app.route('/train', methods=['POST'])
@@ -266,7 +276,7 @@ def train():
 
         model_folder_path = app.config['MODEL_FOLDER'] + contract_address
 
-        accuracy,model_saved_path = ClientUpdate(model_folder_path= model_folder_path,data_path= contributor.data_path,contract_address= contract_address,client_address=account, base_data_path = app.config['BASE_DATA'])
+        accuracy,model_saved_path = ClientUpdate(model_folder_path= model_folder_path,data_path= contributor.data_path,contract_address= contract_address,client_address=account, base_data_path = app.config['BASE_DATA_FOLDER'])
         contributor.model_path = model_saved_path
         contributor.accuracy = accuracy
         db.session.commit()
@@ -289,6 +299,7 @@ def get_accuracies():
     temp = request.get_json()
     print(temp)
     account = temp["params"]["userID"]
+    print(account)
     contract_address = temp["params"]["contract_address"]
     o = Organizer.query.filter_by(wallet_address=account).first()
     base_accuracy = o.base_accuracy
@@ -310,16 +321,24 @@ def get_accuracies():
         accuracy_response.append(accuracy_dict)
     
     submission_response = list()
-    
+    temp_diff = []
+    for c in Contributor.query.filter_by(contract_address=contract_address):
+        temp_diff.append(c.accuracy - base_accuracy)
+
+    itr = 0
+    org = Organizer.query.filter_by(contract_address=contract_address).order_by(Organizer.oid.desc()).first()
     for c in Contributor.query.filter_by(contract_address=contract_address):
         submission_dict = dict()
         submission_dict["wallet_address"] = c.wallet_address
         submission_dict["accuracy"] = c.accuracy
-        submission_dict["reward_earned"] = c.reward_earned
+        submission_dict["reward_earned"] = float(org.reward * (temp_diff[itr] / sum(temp_diff)))
+        itr += 1
         submission_dict["contract_address"] = c.contract_address
         submission_dict["base_accuracy"] = base_accuracy
+        
         submission_response.append(submission_dict)
     
+
     s = [{"wallet_address":"0xcC1C004756AC35572e225D0aE51e02fdD603Bf60","accuracy":70, "reward_earned": 10, "contract_address": "0xd227568bF5B97cf351Bb95D4fC6a423e9CBa35e3"},
         {"wallet_address":"0x57394cbFEF9a2955220f068a91e30125707b8Ec3","accuracy":80, "reward_earned": 20, "contract_address": "0xd227568bF5B97cf351Bb95D4fC6a423e9CBa35e3"},
         {"wallet_address":"0x26e99b39B91c3fe5b180E48EA01464a93f3CB7371","accuracy":90, "reward_earned": 30, "contract_address": "0xd227568bF5B97cf351Bb95D4fC6a423e9CBa35e3"}
@@ -359,13 +378,14 @@ def get_organizer_contract_data():
     for o in Organizer.query.filter_by(wallet_address=account):
         organizer_dict = dict()
         organizer_dict["contract_address"] = o.contract_address
-        organizer_dict["organizer_address"] = o.wallet_address
+        organizer_dict["model_description"] = o.model_description
+        organizer_dict["contract_name"] = o.contract_name
         organizer_dict["base_accuracy"] = o.base_accuracy
         organizer_dict["reward"] = o.reward
         # submission_response.append(submission_dict)
         contracts.append(organizer_dict)
 
-            
+    print(contracts)        
     c = [{"organizer_address":"0xcC1C004756AC35572e225D0aE51e02fdD603Bf60","base_accuracy":70, "reward": 10, "contract_address": "0xd227568bF5B97cf351Bb95D4fC6a423e9CBa35e3"},
         {"organizer_address":"0x57394cbFEF9a2955220f068a91e30125707b8Ec3","base_accuracy":80, "reward": 20, "contract_address": "0xd227568bF5B97cf351Bb95D4fC6a423e9CBa35e3"},
         {"organizer_address":"0x26e99b39B91c3fe5b180E48EA01464a93f3CB7371","base_accuracy":90, "reward": 30, "contract_address": "0xd227568bF5B97cf351Bb95D4fC6a423e9CBa35e3"}
@@ -376,17 +396,19 @@ def get_organizer_contract_data():
 @cross_origin()
 def get_contract_data():
 
+    account = request.args.get("userID")
     contracts = list()
     for o in Organizer.query.all():
         organizer_dict = dict()
         organizer_dict["contract_address"] = o.contract_address
         organizer_dict["organizer_address"] = o.wallet_address
+        organizer_dict["contract_name"] = o.contract_name
         organizer_dict["base_accuracy"] = o.base_accuracy
         organizer_dict["reward"] = o.reward
         # submission_response.append(submission_dict)
         contracts.append(organizer_dict)
 
-            
+    print(contracts)        
     c = [{"organizer_address":"0xcC1C004756AC35572e225D0aE51e02fdD603Bf60","base_accuracy":70, "reward": 10, "contract_address": "0xd227568bF5B97cf351Bb95D4fC6a423e9CBa35e3"},
         {"organizer_address":"0x57394cbFEF9a2955220f068a91e30125707b8Ec3","base_accuracy":80, "reward": 20, "contract_address": "0xd227568bF5B97cf351Bb95D4fC6a423e9CBa35e3"},
         {"organizer_address":"0x26e99b39B91c3fe5b180E48EA01464a93f3CB7371","base_accuracy":90, "reward": 30, "contract_address": "0xd227568bF5B97cf351Bb95D4fC6a423e9CBa35e3"}
